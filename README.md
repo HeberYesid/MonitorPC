@@ -41,3 +41,16 @@ Desde PowerShell, en esta carpeta:
 ```
 
 El script de compilación usa el `csc.exe` de .NET Framework instalado en Windows y crea `bin\MonitorPC.exe`. La autoprueba necesita una sesión de escritorio interactiva. Toma muestras reales, comprueba umbrales y valores ausentes, y prueba cierre normal/forzado e identidad incorrecta **solo** con dos instancias desechables de MonitorPC que crea ella misma. Prueba también filtro, grupos, fijación, selección, ordenación, el resumen de bandeja y el detalle de picos en una ventana WinForms real. Los contadores de disco, GPU y red se informan incluso cuando no están disponibles en el equipo. El informe se guarda en una carpeta temporal, no como registro de la app.
+
+## Integración continua
+
+[GitHub Actions](.github/workflows/ci.yml) compila con advertencias tratadas como errores y ejecuta la autoprueba sin escritorio en Windows Server 2022 y 2025 x64. Se ejecuta en cada push a `main`, en los pull requests hacia `main` o manualmente desde **Actions → CI**. Los informes de prueba quedan disponibles durante 14 días, también si una autoprueba falla y genera un informe. Un push a `main` conserva además el ejecutable que pasó la autoprueba en Windows Server 2025. No crea releases ni despliega.
+
+Para reproducir la comprobación de CI en Windows:
+
+```powershell
+.\compilar.ps1 -Directorio 'bin\ci'
+.\probar.ps1 -Directorio 'bin\ci' -SinEscritorio
+```
+
+Ese modo comprueba umbrales, picos y mediciones de Windows, pero no prueba ventanas, bandeja ni acciones de cierre. Para esos casos ejecute `probar.ps1` sin `-SinEscritorio` desde un escritorio interactivo. Las versiones de Windows Server de CI no sustituyen una prueba manual en Windows 10/11.

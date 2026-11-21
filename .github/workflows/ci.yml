@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows x64 (${{ matrix.imagen }})
+    runs-on: ${{ matrix.imagen }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        imagen: [windows-2022, windows-2025]
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compilar con advertencias como errores
+        run: .\compilar.ps1 -Directorio 'bin\ci'
+
+      - name: Ejecutar autoprueba sin escritorio
+        id: autoprueba
+        run: .\probar.ps1 -Directorio 'bin\ci' -SinEscritorio -Informe 'bin\ci\autoprueba.txt'
+
+      - name: Conservar informe de pruebas
+        if: ${{ !cancelled() && (steps.autoprueba.outcome == 'success' || steps.autoprueba.outcome == 'failure') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: informe-${{ matrix.imagen }}
+          path: bin/ci/autoprueba.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Conservar ejecutable verificado de main
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.imagen == 'windows-2025' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: MonitorPC-windows-x64
+          path: bin/ci/MonitorPC.exe
+          if-no-files-found: error
+          retention-days: 14

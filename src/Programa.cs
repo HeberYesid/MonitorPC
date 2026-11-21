@@ -15,10 +15,14 @@ namespace MonitorPC
         [STAThread]
         private static int Main(string[] args)
         {
+            if (args.Length == 2 && args[0] == "--autoprueba-sin-escritorio")
+            {
+                using (var salida = new StreamWriter(args[1])) return Pruebas.Ejecutar(salida, false);
+            }
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
             if (args.Length == 2 && args[0] == "--autoprueba")
             {
-                using (var salida = new StreamWriter(args[1])) return Pruebas.Ejecutar(salida);
+                using (var salida = new StreamWriter(args[1])) return Pruebas.Ejecutar(salida, true);
             }
             if (args.Length == 1 && args[0] == "--ventana-de-prueba")
             {

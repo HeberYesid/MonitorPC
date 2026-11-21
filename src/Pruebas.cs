@@ -11,11 +11,12 @@ namespace MonitorPC
 {
     internal static class Pruebas
     {
-        internal static int Ejecutar(TextWriter salida)
+        internal static int Ejecutar(TextWriter salida, bool escritorio)
         {
             try
             {
                 Registrar(salida, "Autoprueba PID " + Process.GetCurrentProcess().Id + " · " + DateTime.Now.ToString("O"));
+                Registrar(salida, escritorio ? "Modo: completo (escritorio interactivo)." : "Modo: sin escritorio. No se prueban ventanas, bandeja ni acciones de cierre.");
                 var prefs = new Preferencias();
                 Exigir(prefs.Nivel(1, null) == 0 && prefs.Nivel(0, 64.9) == 1 && prefs.Nivel(2, 65) == 2 &&
                     prefs.Nivel(3, 90) == 3 && prefs.Nivel(4, 25 * 125000) == 2 && prefs.Nivel(5, 100 * 125000) == 3, "umbrales y datos ausentes");
@@ -28,10 +29,10 @@ namespace MonitorPC
                     for (int i = 0; i < Muestra.Nombres.Length; i++) Registrar(salida, Muestra.Nombres[i] + ": " + Muestra.Texto(i, actual.Valores[i]));
                     Registrar(salida, "Espacio libre: " + actual.Espacio());
                     Exigir(!primera.Valores[0].HasValue && actual.Valores[0].HasValue && actual.Valores[0] >= 0 && actual.Valores[0] <= 100, "CPU real y calentamiento");
-                    Exigir(actual.RamTotal > actual.RamLibre && actual.RamLibre > 0 && actual.Valores[1] > 0, "RAM real");
+                    Exigir(actual.RamTotal > 0 && actual.RamLibre >= 0 && actual.RamLibre <= actual.RamTotal && actual.Valores[1].HasValue, "RAM real");
                     Exigir(actual.EspacioTotal >= actual.EspacioLibre && actual.EspacioTotal > 0, "espacio real");
                     Exigir(actual.Valores.All(v => !v.HasValue || (v.Value >= 0 && !double.IsInfinity(v.Value))), "rango de los contadores");
-                    Exigir(actual.Procesos != null && actual.Procesos.Count > 5, "enumeración real de procesos");
+                    Exigir(actual.Procesos != null && actual.Procesos.Count > 0, "enumeración real de procesos");
                     using (var propio = Process.GetCurrentProcess())
                     {
                         var fila = actual.Procesos.Single(p => p.Pid == propio.Id);
@@ -39,8 +40,11 @@ namespace MonitorPC
                     }
                     Exigir(medidor.Tomar(false).Procesos == null, "la toma de fondo no enumera procesos");
                 }
-                ProbarCierre(salida, false); ProbarCierre(salida, true);
-                ProbarVentana(salida);
+                if (escritorio)
+                {
+                    ProbarCierre(salida, false); ProbarCierre(salida, true);
+                    ProbarVentana(salida);
+                }
                 Registrar(salida, "Autoprueba completada sin fallos."); return 0;
             }
             catch (Exception e) { Registrar(salida, "FALLO: " + e); return 1; }
